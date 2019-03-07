@@ -28,6 +28,8 @@ else()
     ament_export_include_directories(bullet3/src bullet3/Extras)
 
     ament_export_libraries(BulletCollision BulletDynamics LinearMath ConvexDecomposition HACD)
+
+    ament_package()
 endif()
 
 add_subdirectory(bullet3)
