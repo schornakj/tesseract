@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
   <name>tesseract_scene_graph</name>
   <version>0.1.0</version>
   <description>The tesseract_scene_graph package</description>
@@ -8,7 +8,14 @@
   <license>BSD</license>
   <author >Levi Armstrong</author>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <!--  This section includes depends for ROS1-->
+  <buildtool_depend condition="$ROS_VERSION == 1">catkin</buildtool_depend>
+  <test_depend condition="$ROS_VERSION == 1">roslib</test_depend>
+
+  <!--  This section includes depends for ROS2-->
+  <buildtool_depend condition="$ROS_VERSION == 2">ament_cmake</buildtool_depend>
+
+  <!--  This section includes depends that are for both ROS1 and ROS2-->
   <depend>tesseract_geometry</depend>
   <depend>liburdfdom-dev</depend>
   <depend>liburdfdom-headers-dev</depend>
@@ -16,9 +23,9 @@
   <depend>assimp-dev</depend>
   <depend>libtinyxml-dev</depend>
 
-  <test_depend>roslib</test_depend>
-
   <export>
+    <build_type condition="$ROS_VERSION == 1">catkin</build_type>
+    <build_type condition="$ROS_VERSION == 2">ament_cmake</build_type>
   </export>
 
 </package>
