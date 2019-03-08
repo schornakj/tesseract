@@ -9,6 +9,8 @@ add_compile_options(-std=c++11 -w)
 #set(USE_DOUBLE_PRECISION ON CACHE BOOL "Enable Bullet Double Precision")
 
 set(BUILD_UNIT_TESTS OFF CACHE BOOL "Disable Bullet Unit Tests" FORCE)
+set(BUILD_SHARED_LIBS ON CACHE BOOL "Enable Shared Libraries" FORCE)
+set(INSTALL_LIBS ON CACHE BOOL "Enable Install Libraries" FORCE)
 
 if ($ENV{ROS_VERSION} VERSION_EQUAL "1")
 

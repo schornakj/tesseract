@@ -90,8 +90,8 @@ else()
   find_package(ament_cmake REQUIRED)
   find_package(tesseract_geometry REQUIRED)
 
-  set(ROS_INCLUDE_DIRS ${tesseract_geometry_LIBRARIES})
-  set(ROS_LIBRARIES ${tesseract_geometry_INCLUDE_DIRS})
+  set(ROS_LIBRARIES ${tesseract_geometry_LIBRARIES})
+  set(ROS_INCLUDE_DIRS ${tesseract_geometry_INCLUDE_DIRS})
   set(ROS_INCLUDE_DESTINATION include)
 
   ament_export_include_directories(

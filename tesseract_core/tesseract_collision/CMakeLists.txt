@@ -108,7 +108,7 @@ else()
     EIGEN3
     Boost
     OCTOMAP
-    LIBFCL
+    fcl
     ccd
     console_bridge)
 
@@ -139,7 +139,7 @@ include_directories(
   SYSTEM ${console_bridge_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME}_bullet
+add_library(${PROJECT_NAME}_bullet SHARED
   src/bullet/bullet_cast_bvh_manager.cpp
   src/bullet/bullet_cast_simple_manager.cpp
   src/bullet/bullet_discrete_bvh_manager.cpp
@@ -149,7 +149,7 @@ add_library(${PROJECT_NAME}_bullet
 target_link_libraries(${PROJECT_NAME}_bullet ${ROS_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${console_bridge_LIBRARIES})
 target_compile_options(${PROJECT_NAME}_bullet PRIVATE -Wsuggest-override -Wconversion -Wsign-conversion)
 
-add_library(${PROJECT_NAME}_fcl src/fcl/fcl_discrete_managers.cpp src/fcl/fcl_utils.cpp)
+add_library(${PROJECT_NAME}_fcl SHARED src/fcl/fcl_discrete_managers.cpp src/fcl/fcl_utils.cpp)
 target_link_libraries(${PROJECT_NAME}_fcl ${ROS_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${console_bridge_LIBRARIES})
 target_compile_options(${PROJECT_NAME}_fcl PRIVATE -Wsuggest-override -Wconversion -Wsign-conversion)
 
@@ -162,7 +162,7 @@ if ($ENV{ROS_VERSION} VERSION_EQUAL "1")
     set(ROS_BIN_DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
     set(ROS_INCLUDE_DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
 else()
-    set(ROS_LIB_DESTINATION lib})
+    set(ROS_LIB_DESTINATION lib)
     set(ROS_BIN_DESTINATION bin)
     set(ROS_INCLUDE_DESTINATION include)
 endif()
@@ -175,7 +175,7 @@ install(TARGETS ${PROJECT_NAME}_bullet ${PROJECT_NAME}_fcl #create_convex_hull
 )
 
 # Mark cpp header files for installation
-install(DIRECTORY include/${PROJECT_NAME}/
+install(DIRECTORY include/${PROJECT_NAME}
   DESTINATION ${ROS_INCLUDE_DESTINATION}
   FILES_MATCHING PATTERN "*.h"
   PATTERN ".svn" EXCLUDE
