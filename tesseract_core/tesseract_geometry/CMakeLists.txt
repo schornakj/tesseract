@@ -19,7 +19,7 @@ if ($ENV{ROS_VERSION} VERSION_EQUAL "1")
   message(STATUS "Building tesseract_collision for ROS1")
 
   find_package(catkin REQUIRED)
-  set(ROS_INCLUDE_DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+  
 
   catkin_package(
     INCLUDE_DIRS
@@ -38,6 +38,8 @@ if ($ENV{ROS_VERSION} VERSION_EQUAL "1")
       console_bridge
   )
 
+  set(ROS_INCLUDE_DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+  
 else()
   
   message(STATUS "Building tesseract_collision for ROS2")
