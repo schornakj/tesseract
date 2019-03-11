@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
   <name>tesseract_environment</name>
   <version>0.1.0</version>
   <description>The tesseract_environment package contains environment</description>
@@ -10,18 +10,23 @@
 
   <author >Levi Armstrong</author>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <!--  This section includes depends for ROS1-->
+  <buildtool_depend condition="$ROS_VERSION == 1">catkin</buildtool_depend>
+  <test_depend condition="$ROS_VERSION == 1">roslib</test_depend>
+
+  <!--  This section includes depends for ROS2-->
+  <buildtool_depend condition="$ROS_VERSION == 2">ament_cmake</buildtool_depend>
 
   <depend>tesseract_collision</depend>
   <depend>tesseract_geometry</depend>
   <depend>tesseract_scene_graph</depend>
 
   <test_depend>gtest</test_depend>
-  <test_depend>roslib</test_depend>
+
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
-    <!-- Other tools can request additional information be placed here -->
-
+    <build_type condition="$ROS_VERSION == 1">catkin</build_type>
+    <build_type condition="$ROS_VERSION == 2">ament_cmake</build_type>
   </export>
 </package>

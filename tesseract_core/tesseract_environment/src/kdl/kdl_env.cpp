@@ -25,7 +25,6 @@
  */
 #include <tesseract_environment/core/macros.h>
 TESSERACT_ENVIRONMENT_IGNORE_WARNINGS_PUSH
-#include <eigen_conversions/eigen_msg.h>
 #include <functional>
 #include <iostream>
 #include <limits>
