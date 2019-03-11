@@ -52,6 +52,7 @@ if ($ENV{ROS_VERSION} VERSION_EQUAL "1")
 
     find_package(roslib REQUIRED)
     list(APPEND ROS_INCLUDE_DIRS ${roslib_INCLUDE_DIRS})
+    list(APPEND ROS_LIBRARIES ${roslib_LIBRARIES})
 
     macro(ros_add_gtest)
       catkin_add_gtest(${ARGN})

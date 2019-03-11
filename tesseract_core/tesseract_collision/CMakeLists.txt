@@ -168,7 +168,7 @@ else()
 endif()
 
 # Mark executables and/or libraries for installation
-install(TARGETS ${PROJECT_NAME}_bullet ${PROJECT_NAME}_fcl #create_convex_hull
+install(TARGETS ${PROJECT_NAME}_bullet ${PROJECT_NAME}_fcl create_convex_hull
   ARCHIVE DESTINATION ${ROS_LIB_DESTINATION}
   LIBRARY DESTINATION ${ROS_LIB_DESTINATION}
   RUNTIME DESTINATION ${ROS_BIN_DESTINATION}
