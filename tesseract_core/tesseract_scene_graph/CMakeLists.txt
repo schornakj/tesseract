@@ -139,6 +139,9 @@ else()
     list(APPEND ROS_INCLUDE_DIRS ${ament_index_cpp_INCLUDE_DIRS})
     list(APPEND ROS_LIBRARIES ${ament_index_cpp_LIBRARIES})
 
+    install(DIRECTORY test
+    DESTINATION share/${PROJECT_NAME})
+
     macro(ros_add_gtest)
       ament_add_gtest(${ARGN})
     endmacro()

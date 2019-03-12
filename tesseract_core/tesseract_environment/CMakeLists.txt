@@ -10,10 +10,6 @@ add_compile_options(
   -Wconversion
   -Wsign-conversion)
 
-<<<<<<< HEAD
-find_package(catkin REQUIRED tesseract_collision tesseract_geometry tesseract_scene_graph)
-=======
->>>>>>> 1ef71fc... Enable ROS2 Build for tesseract_environment
 
 ## System dependencies are found with CMake's conventions
 find_package(Eigen3 REQUIRED)
@@ -96,21 +92,12 @@ else()
     ${PROJECT_NAME}_kdl
     ${ROS_LIBRARIES}
     ${orocos_kdl_LIBRARIES}
-<<<<<<< HEAD
-    ${console_bridge_LIBRARIES}
-  CATKIN_DEPENDS
-    tesseract_collision
-    tesseract_geometry
-    tesseract_scene_graph
-  DEPENDS
-=======
     ${console_bridge_LIBRARIES})
 
   ament_export_dependencies(
     tesseract_collision
     tesseract_geometry
     tesseract_scene_graph
->>>>>>> 1ef71fc... Enable ROS2 Build for tesseract_environment
     EIGEN3
     orocos_kdl
     console_bridge)
@@ -128,6 +115,9 @@ else()
     list(APPEND ROS_INCLUDE_DIRS ${ament_index_cpp_INCLUDE_DIRS})
     list(APPEND ROS_LIBRARIES ${ament_index_cpp_LIBRARIES})
 
+    install(DIRECTORY test
+    DESTINATION share/${PROJECT_NAME})
+    
     macro(ros_add_gtest)
       ament_add_gtest(${ARGN})
     endmacro()
