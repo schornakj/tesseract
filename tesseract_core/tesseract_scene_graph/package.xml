@@ -14,6 +14,7 @@
 
   <!--  This section includes depends for ROS2-->
   <buildtool_depend condition="$ROS_VERSION == 2">ament_cmake</buildtool_depend>
+  <test_depend condition="$ROS_VERSION == 2">ament_index_cpp</test_depend>
 
   <!--  This section includes depends that are for both ROS1 and ROS2-->
   <depend>tesseract_geometry</depend>
@@ -22,6 +23,8 @@
   <depend>libconsole-bridge-dev</depend>
   <depend>assimp-dev</depend>
   <depend>libtinyxml-dev</depend>
+
+  <test_depend>gtest</test_depend>
 
   <export>
     <build_type condition="$ROS_VERSION == 1">catkin</build_type>

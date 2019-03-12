@@ -3,7 +3,13 @@ TESSERACT_KINEMATICS_IGNORE_WARNINGS_PUSH
 #include <gtest/gtest.h>
 #include <fstream>
 #include <tesseract_scene_graph/parser/urdf_parser.h>
+
+#ifdef ROS2
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#else
 #include <ros/package.h>
+#endif
+
 TESSERACT_KINEMATICS_IGNORE_WARNINGS_POP
 
 #include "tesseract_kinematics/kdl/kdl_fwd_kin_chain.h"
@@ -24,7 +30,12 @@ std::string locateResource(const std::string& url)
 
     std::string package = mod_url.substr(0, pos);
     mod_url.erase(0, pos);
+    
+    #ifdef ROS2
+    std::string package_path = ament_index_cpp::get_package_share_directory(package);
+    #else
     std::string package_path = ros::package::getPath(package);
+    #endif
 
     if (package_path.empty())
     {

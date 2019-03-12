@@ -126,17 +126,26 @@ else()
     console_bridge
     TinyXML)
 
-  ament_package()
+  if (BUILD_TESTING)
 
-  if (AMENT_ENABLE_TESTING)
+    add_definitions(-DROS2)
 
     set(ROS_BUILD_TESTING ON)
+
+    find_package(ament_index_cpp REQUIRED)
+    find_package(ament_cmake_gtest REQUIRED)
+    find_package(ament_lint_auto REQUIRED)
+
+    list(APPEND ROS_INCLUDE_DIRS ${ament_index_cpp_INCLUDE_DIRS})
+    list(APPEND ROS_LIBRARIES ${ament_index_cpp_LIBRARIES})
 
     macro(ros_add_gtest)
       ament_add_gtest(${ARGN})
     endmacro()
 
   endif()
+
+  ament_package()
 
 endif()
 

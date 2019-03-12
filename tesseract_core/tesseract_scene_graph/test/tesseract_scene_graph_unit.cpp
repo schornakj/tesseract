@@ -5,7 +5,13 @@ TESSERACT_SCENE_GRAPH_IGNORE_WARNINGS_PUSH
 #include <iostream>
 #include <fstream>
 #include <tesseract_geometry/geometries.h>
+
+#ifdef ROS2
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#else
 #include <ros/package.h>
+#endif
+
 TESSERACT_SCENE_GRAPH_IGNORE_WARNINGS_POP
 
 #include <tesseract_scene_graph/graph.h>
@@ -242,7 +248,12 @@ std::string locateResource(const std::string& url)
 
     std::string package = mod_url.substr(0, pos);
     mod_url.erase(0, pos);
+    
+    #ifdef ROS2
+    std::string package_path = ament_index_cpp::get_package_share_directory(package);
+    #else
     std::string package_path = ros::package::getPath(package);
+    #endif
 
     if (package_path.empty())
     {

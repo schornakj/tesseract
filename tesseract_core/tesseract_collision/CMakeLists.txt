@@ -112,7 +112,7 @@ else()
     ccd
     console_bridge)
 
-  if (AMENT_ENABLE_TESTING)
+  if (BUILD_TESTING)
 
     set(ROS_BUILD_TESTING ON)
 
