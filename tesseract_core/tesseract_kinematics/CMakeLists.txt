@@ -10,7 +10,6 @@ add_compile_options(
   -Wconversion
   -Wsign-conversion)
 
-
 ## System dependencies are found with CMake's conventions
 find_package(Eigen3 REQUIRED)
 find_package(orocos_kdl REQUIRED)
@@ -63,8 +62,6 @@ if ($ENV{ROS_VERSION} VERSION_EQUAL "1")
 else()
 
   message(STATUS "Building tesseract_collision for ROS2")
-
-  list(APPEND CMAKE_MODULE_PATH ${tesseract_scene_graph_DIR})
   
   find_package(ament_cmake REQUIRED)
   find_package(tesseract_scene_graph)

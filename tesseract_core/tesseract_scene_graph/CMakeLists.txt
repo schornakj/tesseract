@@ -88,6 +88,9 @@ if ($ENV{ROS_VERSION} VERSION_EQUAL "1")
 
   endif()
 
+  install(DIRECTORY cmake
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
 else()
 
   find_package(ament_cmake REQUIRED)
@@ -148,7 +151,9 @@ else()
 
   endif()
 
-  ament_package()
+  ament_package(
+    CONFIG_EXTRAS cmake/FindTinyXML.cmake
+  )
 
 endif()
 
@@ -165,21 +170,12 @@ include_directories(
   SYSTEM ${TinyXML_INCLUDE_DIRS}
 )
 
-if ($ENV{ROS_VERSION} VERSION_EQUAL "1")
-    set(ROS_SHARE_DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/cmake)
-else()
-    set(ROS_SHARE_DESTINATION share/${PROJECT_NAME})
-endif()
-
 # Mark cpp header files for installation
 install(DIRECTORY include/${PROJECT_NAME}
   DESTINATION ${ROS_INCLUDE_DESTINATION}
   FILES_MATCHING PATTERN "*.h"
   PATTERN ".svn" EXCLUDE
 )
-
-install(DIRECTORY cmake
-  DESTINATION ${ROS_SHARE_DESTINATION})
 
 if (ROS_BUILD_TESTING)
 

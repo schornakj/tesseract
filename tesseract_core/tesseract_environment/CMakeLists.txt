@@ -67,8 +67,6 @@ else()
 
   message(STATUS "Building tesseract_environment for ROS2")
 
-  list(APPEND CMAKE_MODULE_PATH ${tesseract_scene_graph_DIR})
-
   find_package(ament_cmake REQUIRED)
   find_package(tesseract_collision REQUIRED)
   find_package(tesseract_geometry REQUIRED)
