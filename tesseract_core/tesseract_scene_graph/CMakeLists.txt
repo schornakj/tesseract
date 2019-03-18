@@ -71,8 +71,6 @@ if ($ENV{ROS_VERSION} VERSION_EQUAL "1")
   #    ASSIMP
   )
 
-  set(ROS_INCLUDE_DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
-
   if (CATKIN_ENABLE_TESTING)
 
     set(ROS_BUILD_TESTING ON)
@@ -98,7 +96,6 @@ else()
 
   set(ROS_LIBRARIES ${tesseract_geometry_LIBRARIES})
   set(ROS_INCLUDE_DIRS ${tesseract_geometry_INCLUDE_DIRS})
-  set(ROS_INCLUDE_DESTINATION include)
 
   ament_export_include_directories(
     include
@@ -172,7 +169,7 @@ include_directories(
 
 # Mark cpp header files for installation
 install(DIRECTORY include/${PROJECT_NAME}
-  DESTINATION ${ROS_INCLUDE_DESTINATION}
+  DESTINATION include
   FILES_MATCHING PATTERN "*.h"
   PATTERN ".svn" EXCLUDE
 )

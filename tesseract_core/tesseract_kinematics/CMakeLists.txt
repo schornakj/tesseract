@@ -18,10 +18,10 @@ find_package(console_bridge REQUIRED)
 set(ROS_BUILD_TESTING OFF)
 if ($ENV{ROS_VERSION} VERSION_EQUAL "1")
 
-  message(STATUS "Building tesseract_collision for ROS1")
-
-  find_package(catkin REQUIRED COMPONENTS tesseract_scene_graph)
+  message(STATUS "Building tesseract_kinematics for ROS1")
   
+  find_package(catkin REQUIRED COMPONENTS tesseract_scene_graph)
+
   set(ROS_INCLUDE_DIRS ${catkin_INCLUDE_DIRS})
   set(ROS_LIBRARIES ${catkin_LIBRARIES})
   
@@ -61,7 +61,7 @@ if ($ENV{ROS_VERSION} VERSION_EQUAL "1")
 
 else()
 
-  message(STATUS "Building tesseract_collision for ROS2")
+  message(STATUS "Building tesseract_kinematics for ROS2")
   
   find_package(ament_cmake REQUIRED)
   find_package(tesseract_scene_graph)
@@ -129,11 +129,9 @@ target_compile_options(${PROJECT_NAME}_kdl PRIVATE -Wsuggest-override -Wconversi
 if ($ENV{ROS_VERSION} VERSION_EQUAL "1")
     set(ROS_LIB_DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
     set(ROS_BIN_DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-    set(ROS_INCLUDE_DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
 else()
     set(ROS_LIB_DESTINATION lib)
     set(ROS_BIN_DESTINATION bin)
-    set(ROS_INCLUDE_DESTINATION include)
 endif()
 
 # Mark executables and/or libraries for installation
@@ -145,7 +143,7 @@ install(TARGETS ${PROJECT_NAME}_kdl
 
 # Mark cpp header files for installation
 install(DIRECTORY include/${PROJECT_NAME}
-  DESTINATION ${ROS_INCLUDE_DESTINATION}
+  DESTINATION include
   FILES_MATCHING PATTERN "*.h"
   PATTERN ".svn" EXCLUDE
 )

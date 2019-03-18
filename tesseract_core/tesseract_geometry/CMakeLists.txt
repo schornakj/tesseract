@@ -38,14 +38,11 @@ if ($ENV{ROS_VERSION} VERSION_EQUAL "1")
       console_bridge
   )
 
-  set(ROS_INCLUDE_DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
-  
 else()
   
   message(STATUS "Building tesseract_collision for ROS2")
 
   find_package(ament_cmake REQUIRED)
-  set(ROS_INCLUDE_DESTINATION include)
 
   ament_export_include_directories(
     include
@@ -71,7 +68,7 @@ include_directories(
 
 # Mark cpp header files for installation
 install(DIRECTORY include/${PROJECT_NAME}
-  DESTINATION ${ROS_INCLUDE_DESTINATION}
+  DESTINATION include
   FILES_MATCHING PATTERN "*.h"
   PATTERN ".svn" EXCLUDE
 )

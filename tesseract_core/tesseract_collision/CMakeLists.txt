@@ -160,11 +160,9 @@ target_compile_options(create_convex_hull PRIVATE -Wsuggest-override -Wconversio
 if ($ENV{ROS_VERSION} VERSION_EQUAL "1")
     set(ROS_LIB_DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
     set(ROS_BIN_DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-    set(ROS_INCLUDE_DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
 else()
     set(ROS_LIB_DESTINATION lib)
     set(ROS_BIN_DESTINATION bin)
-    set(ROS_INCLUDE_DESTINATION include)
 endif()
 
 # Mark executables and/or libraries for installation
@@ -176,7 +174,7 @@ install(TARGETS ${PROJECT_NAME}_bullet ${PROJECT_NAME}_fcl create_convex_hull
 
 # Mark cpp header files for installation
 install(DIRECTORY include/${PROJECT_NAME}
-  DESTINATION ${ROS_INCLUDE_DESTINATION}
+  DESTINATION include
   FILES_MATCHING PATTERN "*.h"
   PATTERN ".svn" EXCLUDE
 )
