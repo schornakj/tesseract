@@ -1,4 +1,4 @@
-time stamp
+builtin_interfaces/Time stamp
 float64 distance
 byte[2] type_id # ROBOT_LINK = 0, ROBOT_ATTACHED = 1
 string[2] link_names

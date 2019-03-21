@@ -10,3 +10,9 @@
 	path = tesseract_ext/libccd_ros/libccd
 	url = https://github.com/danfis/libccd.git
 	branch = master
+[submodule "octomap_msgs"]
+	path = octomap_msgs
+	url = https://github.com/AcutronicRobotics/octomap_msgs
+[submodule "octomap"]
+	path = octomap
+	url = https://github.com/AcutronicRobotics/octomap
