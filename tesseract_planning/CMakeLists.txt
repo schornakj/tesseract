@@ -20,6 +20,8 @@ catkin_package(
     ${PROJECT_NAME}_trajopt
     ${PROJECT_NAME}_trajopt_freespace
     ${PROJECT_NAME}_trajopt_array
+    ${PROJECT_NAME}_trajopt_spline
+
   CATKIN_DEPENDS
     roscpp
     tesseract_ros
@@ -49,6 +51,11 @@ add_library(${PROJECT_NAME}_trajopt_array src/trajopt/trajopt_array_planner.cpp)
 target_link_libraries(${PROJECT_NAME}_trajopt_array ${catkin_LIBRARIES} ${PROJECT_NAME}_trajopt)
 target_compile_options(${PROJECT_NAME}_trajopt_array PRIVATE -Wsuggest-override -Wconversion -Wsign-conversion)
 
+# Trajopt Spline Planner
+add_library(${PROJECT_NAME}_trajopt_spline src/trajopt/trajopt_spline_planner.cpp)
+target_link_libraries(${PROJECT_NAME}_trajopt_spline ${catkin_LIBRARIES} ${PROJECT_NAME}_trajopt)
+target_compile_options(${PROJECT_NAME}_trajopt_spline PRIVATE -Wsuggest-override -Wconversion -Wsign-conversion)
+
 # OMPL Planning Interface
 add_library(${PROJECT_NAME}_ompl
   src/ompl/chain_ompl_interface.cpp
@@ -69,7 +76,7 @@ target_compile_options(${PROJECT_NAME}_ompl_test PRIVATE -Wsuggest-override -Wco
 ## Install ##
 #############
 
-install(TARGETS ${PROJECT_NAME}_ompl ${PROJECT_NAME}_trajopt ${PROJECT_NAME}_trajopt_freespace ${PROJECT_NAME}_trajopt_array
+install(TARGETS ${PROJECT_NAME}_ompl ${PROJECT_NAME}_trajopt ${PROJECT_NAME}_trajopt_freespace ${PROJECT_NAME}_trajopt_array ${PROJECT_NAME}_trajopt_spline
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
