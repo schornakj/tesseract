@@ -129,6 +129,10 @@ install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake"
   DESTINATION lib/cmake/${PROJECT_NAME})
 
+# terrible terrible workaround to allow package to be found by ROS2 pluginlib
+install(FILES ${PROJECT_NAME} DESTINATION share/ament_index/resource_index/packages)
+
+
 export(EXPORT ${PROJECT_NAME}-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-targets.cmake)
 
 # ADD Examples
