@@ -1,8 +1,8 @@
 /**
- * @file conversions.h
- * @brief Tesseract OMPL planner conversions
+ * @file descartes_motion_planner.cpp
+ * @brief Tesseract ROS Descartes planner
  *
- * @author Jonathan Meyer
+ * @author Levi Armstrong
  * @date April 18, 2018
  * @version TODO
  * @bug No known bugs
@@ -23,24 +23,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef TESSERACT_MOTION_PLANNERS_OMPL_CONVERSIONS_H
-#define TESSERACT_MOTION_PLANNERS_OMPL_CONVERSIONS_H
-
-#include <tesseract_common/macros.h>
-TESSERACT_COMMON_IGNORE_WARNINGS_PUSH
-#include <ompl/geometric/PathGeometric.h>
-TESSERACT_COMMON_IGNORE_WARNINGS_POP
-
-#include <tesseract_common/types.h>
+#include <tesseract_motion_planners/descartes/impl/descartes_motion_planner.hpp>
 
 namespace tesseract_motion_planners
 {
-/**
- * @brief Convert an ompl path to tesseract TrajArray
- * @param path OMPL Path
- * @return Tesseract TrajArray
- */
-tesseract_common::TrajArray toTrajArray(const ompl::geometric::PathGeometric& path);
-}  // namespace tesseract_motion_planners
+// Explicit template instantiation
+template class DescartesMotionPlanner<float>;
+template class DescartesMotionPlanner<double>;
 
-#endif
+}  // namespace tesseract_motion_planners

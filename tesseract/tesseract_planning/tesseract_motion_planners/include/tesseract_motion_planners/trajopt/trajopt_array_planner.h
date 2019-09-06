@@ -37,6 +37,8 @@ TESSERACT_COMMON_IGNORE_WARNINGS_POP
 
 namespace tesseract_motion_planners
 {
+class TrajOptArrayPlannerStatusCategory;
+
 /**
  * @brief Config to setup array planner. The input is a vector of waypoints
  *
@@ -61,7 +63,7 @@ struct TrajOptArrayPlannerConfig
    *
    * An example use case is setting it to be at the center of the joint limits. This tends to pull the robot away from
    * singularities */
-  JointWaypoint::ConstPtr configuration_ = std::make_shared<JointWaypoint>();
+  JointWaypoint::ConstPtr configuration_ = nullptr;
 
   /** @brief If true, collision checking will be enabled. Default: true*/
   bool collision_check_ = true;
@@ -105,7 +107,7 @@ public:
    * @param config Configuration object for the planner. The planner will get configured from this object and
    *                will use this configuration for every solve attempt.
    */
-  TrajOptArrayPlanner(const std::string& name = "TRAJOPT_ARRAY");
+  TrajOptArrayPlanner(std::string name = "TRAJOPT_ARRAY");
 
   /**
    * @brief Set the configuration for the planner
@@ -122,7 +124,7 @@ public:
    * @param response The response
    * @return True on success, false otherwise
    */
-  bool solve(PlannerResponse& response) override;
+  tesseract_common::StatusCode solve(PlannerResponse& response) override;
 
   bool terminate() override;
 
@@ -132,12 +134,31 @@ public:
    * @brief checks whether the planner is properly configure for solving a motion plan
    * @return True when it is configured correctly, false otherwise
    */
-  bool isConfigured() const override;
+  tesseract_common::StatusCode isConfigured() const override;
 
 protected:
   tesseract_motion_planners::TrajOptMotionPlanner planner_; /** @brief The trajopt planner */
   std::shared_ptr<trajopt::ProblemConstructionInfo> pci_;   /** @brief The problem info*/
-  std::shared_ptr<TrajOptArrayPlannerConfig> config_;       /** @brief the configuration passed at construction **/
+  std::shared_ptr<TrajOptArrayPlannerConfig> config_;       /** @brief The configuration passed at construction */
+  std::shared_ptr<const TrajOptArrayPlannerStatusCategory> status_category_; /** @brief The plannsers status codes */
 };
+
+class TrajOptArrayPlannerStatusCategory : public tesseract_common::StatusCategory
+{
+public:
+  TrajOptArrayPlannerStatusCategory(std::string name);
+  const std::string& name() const noexcept override;
+  std::string message(int code) const override;
+
+  enum
+  {
+    IsConfigured = 0,
+    IsNotConfigured = -1
+  };
+
+private:
+  std::string name_;
+};
+
 }  // namespace tesseract_motion_planners
 #endif  // TESSERACT_PLANNING_TRAJOPT_PLANNER_H
