@@ -3,7 +3,12 @@ project(tesseract_motion_planners VERSION 0.1.0 LANGUAGES CXX)
 
 find_package(ompl REQUIRED)
 find_package(trajopt REQUIRED)
+find_package(descartes_light REQUIRED)
+find_package(descartes_samplers REQUIRED)
+find_package(descartes_opw REQUIRED)
+find_package(descartes_tesseract REQUIRED)
 find_package(tesseract REQUIRED)
+find_package(tesseract_common REQUIRED)
 find_package(console_bridge REQUIRED)
 find_package(Boost REQUIRED)
 
@@ -65,30 +70,60 @@ target_include_directories(${PROJECT_NAME}_trajopt_array PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     "$<INSTALL_INTERFACE:include>")
 
-# OMPL Planning Interface
-add_library(${PROJECT_NAME}_ompl SHARED
-  src/ompl/chain_ompl_interface.cpp
+# OMPL Freespace Planning Interface
+add_library(${PROJECT_NAME}_ompl_freespace SHARED
+  src/ompl/ompl_freespace_planner.cpp
   src/ompl/conversions.cpp
   src/ompl/continuous_motion_validator.cpp
+  src/ompl/discrete_motion_validator.cpp
+  src/ompl/weighted_real_vector_state_sampler.cpp
 )
-target_link_libraries(${PROJECT_NAME}_ompl PUBLIC ${PROJECT_NAME}_core ${OMPL_LIBRARIES})
-target_compile_options(${PROJECT_NAME}_ompl PRIVATE -Wsuggest-override -Wconversion -Wsign-conversion)
+target_link_libraries(${PROJECT_NAME}_ompl_freespace PUBLIC ${PROJECT_NAME}_core ${OMPL_LIBRARIES})
+target_compile_options(${PROJECT_NAME}_ompl_freespace PRIVATE -Wsuggest-override -Wconversion -Wsign-conversion)
 if(CXX_FEATURE_FOUND EQUAL "-1")
-    target_compile_options(${PROJECT_NAME}_ompl PUBLIC -std=c++11)
+    target_compile_options(${PROJECT_NAME}_ompl_freespace PUBLIC -std=c++11)
 else()
-    target_compile_features(${PROJECT_NAME}_ompl PUBLIC cxx_std_11)
+    target_compile_features(${PROJECT_NAME}_ompl_freespace PUBLIC cxx_std_11)
 endif()
-target_include_directories(${PROJECT_NAME}_ompl PUBLIC
+target_include_directories(${PROJECT_NAME}_ompl_freespace PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     "$<INSTALL_INTERFACE:include>")
-target_include_directories(${PROJECT_NAME}_ompl SYSTEM PUBLIC
+target_include_directories(${PROJECT_NAME}_ompl_freespace SYSTEM PUBLIC
     ${OMPL_INCLUDE_DIRS})
+
+# Descartes Planner
+add_library(${PROJECT_NAME}_descartes SHARED src/descartes/descartes_motion_planner.cpp)
+target_link_libraries(${PROJECT_NAME}_descartes PUBLIC ${PROJECT_NAME}_core descartes::descartes_light descartes::descartes_samplers descartes::descartes_opw descartes::descartes_tesseract)
+target_compile_options(${PROJECT_NAME}_descartes PRIVATE -Wsuggest-override -Wconversion -Wsign-conversion)
+if(CXX_FEATURE_FOUND EQUAL "-1")
+    target_compile_options(${PROJECT_NAME}_descartes PUBLIC -std=c++11)
+else()
+    target_compile_features(${PROJECT_NAME}_descartes PUBLIC cxx_std_11)
+endif()
+target_include_directories(${PROJECT_NAME}_descartes PUBLIC
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    "$<INSTALL_INTERFACE:include>")
+
+# Descartes Planner
+add_library(${PROJECT_NAME}_descartes_trajopt_array SHARED src/hybrid/descartes_trajopt_array_planner.cpp)
+target_link_libraries(${PROJECT_NAME}_descartes_trajopt_array PUBLIC ${PROJECT_NAME}_descartes ${PROJECT_NAME}_trajopt_array)
+target_compile_options(${PROJECT_NAME}_descartes_trajopt_array PRIVATE -Wsuggest-override -Wconversion -Wsign-conversion)
+if(CXX_FEATURE_FOUND EQUAL "-1")
+    target_compile_options(${PROJECT_NAME}_descartes_trajopt_array PUBLIC -std=c++11)
+else()
+    target_compile_features(${PROJECT_NAME}_descartes_trajopt_array PUBLIC cxx_std_11)
+endif()
+target_include_directories(${PROJECT_NAME}_descartes_trajopt_array PUBLIC
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    "$<INSTALL_INTERFACE:include>")
 
 list (APPEND PACKAGE_LIBRARIES ${PROJECT_NAME}_core)
 list (APPEND PACKAGE_LIBRARIES ${PROJECT_NAME}_trajopt)
 list (APPEND PACKAGE_LIBRARIES ${PROJECT_NAME}_trajopt_freespace)
 list (APPEND PACKAGE_LIBRARIES ${PROJECT_NAME}_trajopt_array)
-list (APPEND PACKAGE_LIBRARIES ${PROJECT_NAME}_ompl)
+list (APPEND PACKAGE_LIBRARIES ${PROJECT_NAME}_ompl_freespace)
+list (APPEND PACKAGE_LIBRARIES ${PROJECT_NAME}_descartes)
+list (APPEND PACKAGE_LIBRARIES ${PROJECT_NAME}_descartes_trajopt_array)
 
 install(TARGETS ${PACKAGE_LIBRARIES} EXPORT ${PROJECT_NAME}-targets DESTINATION lib)
 install(EXPORT ${PROJECT_NAME}-targets NAMESPACE tesseract:: DESTINATION lib/cmake/${PROJECT_NAME})

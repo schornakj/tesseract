@@ -33,6 +33,7 @@ TESSERACT_COMMON_IGNORE_WARNINGS_PUSH
 #include <trajopt_utils/logging.hpp>
 #include <trajopt_sco/optimizers.hpp>
 #include <trajopt_sco/sco_common.hpp>
+#include <algorithm>
 TESSERACT_COMMON_IGNORE_WARNINGS_POP
 
 #include <tesseract_motion_planners/trajopt/trajopt_array_planner.h>
@@ -42,12 +43,34 @@ using namespace trajopt;
 
 namespace tesseract_motion_planners
 {
-TrajOptArrayPlanner::TrajOptArrayPlanner(const std::string& name) : pci_(nullptr), config_(nullptr)
+TrajOptArrayPlannerStatusCategory::TrajOptArrayPlannerStatusCategory(std::string name) : name_(name) {}
+const std::string& TrajOptArrayPlannerStatusCategory::name() const noexcept { return name_; }
+std::string TrajOptArrayPlannerStatusCategory::message(int code) const
 {
-  name_ = name;
-  // TODO: These should be tied to enumeration ints and returned through an getLastErrorMsg() method
-  // Error Status Codes
-  status_code_map_ = planner_.getAvailableStatusCodes();
+  switch (code)
+  {
+    case IsConfigured:
+    {
+      return "TrajOpt Array Planner is configured.";
+    }
+    case IsNotConfigured:
+    {
+      return "TrajOpt Array Planner is not configured, must call setConfiguration prior to calling solve.";
+    }
+    default:
+    {
+      assert(false);
+      return "";
+    }
+  }
+}
+
+TrajOptArrayPlanner::TrajOptArrayPlanner(std::string name)
+  : MotionPlanner(name)
+  , pci_(nullptr)
+  , config_(nullptr)
+  , status_category_(std::make_shared<const TrajOptArrayPlannerStatusCategory>(name))
+{
 }
 
 bool TrajOptArrayPlanner::terminate()
@@ -62,27 +85,34 @@ void TrajOptArrayPlanner::clear()
   pci_ = nullptr;
 }
 
-bool TrajOptArrayPlanner::isConfigured() const
+tesseract_common::StatusCode TrajOptArrayPlanner::isConfigured() const
 {
-  return pci_ != nullptr && config_ != nullptr && planner_.isConfigured();
+  if (pci_ == nullptr || config_ == nullptr)
+    return tesseract_common::StatusCode(TrajOptArrayPlannerStatusCategory::IsNotConfigured, status_category_);
+
+  tesseract_common::StatusCode trajopt_status = planner_.isConfigured();
+  if (!trajopt_status)
+    return trajopt_status;
+
+  return tesseract_common::StatusCode(TrajOptArrayPlannerStatusCategory::IsConfigured, status_category_);
 }
 
-bool TrajOptArrayPlanner::solve(PlannerResponse& response)
+tesseract_common::StatusCode TrajOptArrayPlanner::solve(PlannerResponse& response)
 {
-  if (!isConfigured())
+  tesseract_common::StatusCode config_status = isConfigured();
+  if (!config_status)
   {
-    response.status_code = -5;
-    response.status_description = status_code_map_[response.status_code];
+    response.status = config_status;
     CONSOLE_BRIDGE_logError("Planner %s is not configured", name_.c_str());
-    return false;
+    return config_status;
   }
 
   tesseract_motion_planners::PlannerResponse planning_response;
 
   // Solve problem. Results are stored in the response
-  bool success = planner_.solve(planning_response);
+  tesseract_common::StatusCode status = planner_.solve(planning_response);
   response = std::move(planning_response);
-  return success;
+  return status;
 }
 
 bool TrajOptArrayPlanner::setConfiguration(const TrajOptArrayPlannerConfig& config)
@@ -125,20 +155,22 @@ bool TrajOptArrayPlanner::setConfiguration(const TrajOptArrayPlannerConfig& conf
       case tesseract_motion_planners::WaypointType::JOINT_WAYPOINT:
       {
         JointWaypoint::Ptr joint_waypoint = std::static_pointer_cast<JointWaypoint>(config.target_waypoints_[ind]);
-        std::shared_ptr<JointPosTermInfo> jv = std::shared_ptr<JointPosTermInfo>(new JointPosTermInfo);
-        Eigen::VectorXd coeffs = joint_waypoint->coeffs_;
+        std::shared_ptr<JointPosTermInfo> jv = std::make_shared<JointPosTermInfo>();
+        const Eigen::VectorXd& coeffs = joint_waypoint->getCoefficients();
+        assert(std::equal(
+            pci.kin->getJointNames().begin(), pci.kin->getJointNames().end(), joint_waypoint->getNames().begin()));
         if (coeffs.size() != pci.kin->numJoints())
           jv->coeffs = std::vector<double>(pci.kin->numJoints(), 1.0);  // Default value
         else
           jv->coeffs = std::vector<double>(coeffs.data(), coeffs.data() + coeffs.rows() * coeffs.cols());
         jv->targets =
-            std::vector<double>(joint_waypoint->joint_positions_.data(),
-                                joint_waypoint->joint_positions_.data() + joint_waypoint->joint_positions_.size());
+            std::vector<double>(joint_waypoint->getPositions().data(),
+                                joint_waypoint->getPositions().data() + joint_waypoint->getPositions().size());
         jv->first_step = static_cast<int>(ind);
         jv->last_step = static_cast<int>(ind);
         jv->name = "joint_position";
-        jv->term_type = joint_waypoint->is_critical_ ? TT_CNT : TT_COST;
-        joint_waypoint->is_critical_ ? pci.cnt_infos.push_back(jv) : pci.cost_infos.push_back(jv);
+        jv->term_type = joint_waypoint->isCritical() ? TT_CNT : TT_COST;
+        joint_waypoint->isCritical() ? pci.cnt_infos.push_back(jv) : pci.cost_infos.push_back(jv);
         break;
       }
       case tesseract_motion_planners::WaypointType::JOINT_TOLERANCED_WAYPOINT:
@@ -147,36 +179,38 @@ bool TrajOptArrayPlanner::setConfiguration(const TrajOptArrayPlannerConfig& conf
         // to keep the problem numerically stable.
         JointTolerancedWaypoint::Ptr joint_waypoint =
             std::static_pointer_cast<JointTolerancedWaypoint>(config.target_waypoints_[ind]);
-        std::shared_ptr<JointPosTermInfo> jv = std::shared_ptr<JointPosTermInfo>(new JointPosTermInfo);
-        Eigen::VectorXd coeffs = joint_waypoint->coeffs_;
+        std::shared_ptr<JointPosTermInfo> jv = std::make_shared<JointPosTermInfo>();
+        const Eigen::VectorXd& coeffs = joint_waypoint->getCoefficients();
+        assert(std::equal(
+            pci.kin->getJointNames().begin(), pci.kin->getJointNames().end(), joint_waypoint->getNames().begin()));
         if (coeffs.size() != pci.kin->numJoints())
           jv->coeffs = std::vector<double>(pci.kin->numJoints(), 1.0);  // Default value
         else
           jv->coeffs = std::vector<double>(coeffs.data(), coeffs.data() + coeffs.rows() * coeffs.cols());
         jv->targets =
-            std::vector<double>(joint_waypoint->joint_positions_.data(),
-                                joint_waypoint->joint_positions_.data() + joint_waypoint->joint_positions_.size());
-        jv->upper_tols =
-            std::vector<double>(joint_waypoint->upper_tolerance_.data(),
-                                joint_waypoint->upper_tolerance_.data() + joint_waypoint->upper_tolerance_.size());
-        jv->lower_tols =
-            std::vector<double>(joint_waypoint->lower_tolerance_.data(),
-                                joint_waypoint->lower_tolerance_.data() + joint_waypoint->lower_tolerance_.size());
+            std::vector<double>(joint_waypoint->getPositions().data(),
+                                joint_waypoint->getPositions().data() + joint_waypoint->getPositions().size());
+        jv->upper_tols = std::vector<double>(joint_waypoint->getUpperTolerance().data(),
+                                             joint_waypoint->getUpperTolerance().data() +
+                                                 joint_waypoint->getUpperTolerance().size());
+        jv->lower_tols = std::vector<double>(joint_waypoint->getLowerTolerance().data(),
+                                             joint_waypoint->getLowerTolerance().data() +
+                                                 joint_waypoint->getLowerTolerance().size());
         jv->first_step = static_cast<int>(ind);
         jv->last_step = static_cast<int>(ind);
         jv->name = "joint_toleranced_position";
-        jv->term_type = joint_waypoint->is_critical_ ? TT_CNT : TT_COST;
-        joint_waypoint->is_critical_ ? pci.cnt_infos.push_back(jv) : pci.cost_infos.push_back(jv);
+        jv->term_type = joint_waypoint->isCritical() ? TT_CNT : TT_COST;
+        joint_waypoint->isCritical() ? pci.cnt_infos.push_back(jv) : pci.cost_infos.push_back(jv);
 
         // Equality cost with coeffs much smaller than inequality
-        std::shared_ptr<JointPosTermInfo> jv_equal = std::shared_ptr<JointPosTermInfo>(new JointPosTermInfo);
+        std::shared_ptr<JointPosTermInfo> jv_equal = std::make_shared<JointPosTermInfo>();
         std::vector<double> leaky_coeffs;
         for (auto& ind : jv->coeffs)
           leaky_coeffs.push_back(ind * 0.1);
         jv_equal->coeffs = leaky_coeffs;
         jv_equal->targets =
-            std::vector<double>(joint_waypoint->joint_positions_.data(),
-                                joint_waypoint->joint_positions_.data() + joint_waypoint->joint_positions_.size());
+            std::vector<double>(joint_waypoint->getPositions().data(),
+                                joint_waypoint->getPositions().data() + joint_waypoint->getPositions().size());
         jv_equal->first_step = static_cast<int>(ind);
         jv_equal->last_step = static_cast<int>(ind);
         jv_equal->name = "joint_toleranced_position_leaky";
@@ -189,26 +223,19 @@ bool TrajOptArrayPlanner::setConfiguration(const TrajOptArrayPlannerConfig& conf
       {
         CartesianWaypoint::Ptr cart_waypoint =
             std::static_pointer_cast<CartesianWaypoint>(config.target_waypoints_[ind]);
-        std::shared_ptr<CartPoseTermInfo> pose = std::shared_ptr<CartPoseTermInfo>(new CartPoseTermInfo);
-        pose->term_type = cart_waypoint->is_critical_ ? TT_CNT : TT_COST;
+        std::shared_ptr<CartPoseTermInfo> pose = std::make_shared<CartPoseTermInfo>();
+        pose->term_type = cart_waypoint->isCritical() ? TT_CNT : TT_COST;
         pose->name = "cartesian_position";
         pose->link = config.link_;
         pose->tcp = config.tcp_;
         pose->timestep = static_cast<int>(ind);
         pose->xyz = cart_waypoint->getPosition();
         pose->wxyz = cart_waypoint->getOrientation();
-        Eigen::VectorXd coeffs = cart_waypoint->coeffs_;
-        if (coeffs.size() != 6)
-        {
-          pose->pos_coeffs = Eigen::Vector3d(10, 10, 10);
-          pose->rot_coeffs = Eigen::Vector3d(10, 10, 10);
-        }
-        else
-        {
-          pose->pos_coeffs = coeffs.head<3>();
-          pose->rot_coeffs = coeffs.tail<3>();
-        }
-        cart_waypoint->is_critical_ ? pci.cnt_infos.push_back(pose) : pci.cost_infos.push_back(pose);
+        const Eigen::VectorXd& coeffs = cart_waypoint->getCoefficients();
+        assert(coeffs.size() == 6);
+        pose->pos_coeffs = coeffs.head<3>();
+        pose->rot_coeffs = coeffs.tail<3>();
+        cart_waypoint->isCritical() ? pci.cnt_infos.push_back(pose) : pci.cost_infos.push_back(pose);
         break;
       }
     }
@@ -217,7 +244,7 @@ bool TrajOptArrayPlanner::setConfiguration(const TrajOptArrayPlannerConfig& conf
   // Set costs for the rest of the points
   if (config.collision_check_)
   {
-    std::shared_ptr<CollisionTermInfo> collision = std::shared_ptr<CollisionTermInfo>(new CollisionTermInfo);
+    std::shared_ptr<CollisionTermInfo> collision = std::make_shared<CollisionTermInfo>();
     collision->name = "collision_cost";
     collision->term_type = TT_COST;
     collision->continuous = config.collision_continuous_;
@@ -229,7 +256,7 @@ bool TrajOptArrayPlanner::setConfiguration(const TrajOptArrayPlannerConfig& conf
   }
   if (config.smooth_velocities_)
   {
-    std::shared_ptr<JointVelTermInfo> jv = std::shared_ptr<JointVelTermInfo>(new JointVelTermInfo);
+    std::shared_ptr<JointVelTermInfo> jv = std::make_shared<JointVelTermInfo>();
     jv->coeffs = std::vector<double>(pci.kin->numJoints(), 5.0);
     jv->targets = std::vector<double>(pci.kin->numJoints(), 0.0);
     jv->first_step = 0;
@@ -240,7 +267,7 @@ bool TrajOptArrayPlanner::setConfiguration(const TrajOptArrayPlannerConfig& conf
   }
   if (config.smooth_accelerations_)
   {
-    std::shared_ptr<JointAccTermInfo> ja = std::shared_ptr<JointAccTermInfo>(new JointAccTermInfo);
+    std::shared_ptr<JointAccTermInfo> ja = std::make_shared<JointAccTermInfo>();
     ja->coeffs = std::vector<double>(pci.kin->numJoints(), 1.0);
     ja->targets = std::vector<double>(pci.kin->numJoints(), 0.0);
     ja->first_step = 0;
@@ -251,7 +278,7 @@ bool TrajOptArrayPlanner::setConfiguration(const TrajOptArrayPlannerConfig& conf
   }
   if (config.smooth_jerks_)
   {
-    std::shared_ptr<JointJerkTermInfo> jj = std::shared_ptr<JointJerkTermInfo>(new JointJerkTermInfo);
+    std::shared_ptr<JointJerkTermInfo> jj = std::make_shared<JointJerkTermInfo>();
     jj->coeffs = std::vector<double>(pci.kin->numJoints(), 1.0);
     jj->targets = std::vector<double>(pci.kin->numJoints(), 0.0);
     jj->first_step = 0;
@@ -261,19 +288,20 @@ bool TrajOptArrayPlanner::setConfiguration(const TrajOptArrayPlannerConfig& conf
     pci.cost_infos.push_back(jj);
   }
   // Add configuration cost
-  if (config.configuration_->joint_positions_.size() > 0)
+  if (config.configuration_ != nullptr)
   {
-    assert(config.configuration_->joint_positions_.size() == pci.kin->numJoints());
+    assert(config.configuration_->getPositions().size() == pci.kin->numJoints());
     JointWaypoint::ConstPtr joint_waypoint = config.configuration_;
-    std::shared_ptr<JointPosTermInfo> jp = std::shared_ptr<JointPosTermInfo>(new JointPosTermInfo);
-    Eigen::VectorXd coeffs = joint_waypoint->coeffs_;
+    std::shared_ptr<JointPosTermInfo> jp = std::make_shared<JointPosTermInfo>();
+    const Eigen::VectorXd& coeffs = joint_waypoint->getCoefficients();
+    assert(std::equal(
+        pci.kin->getJointNames().begin(), pci.kin->getJointNames().end(), joint_waypoint->getNames().begin()));
     if (coeffs.size() != pci.kin->numJoints())
       jp->coeffs = std::vector<double>(pci.kin->numJoints(), 0.1);  // Default value
     else
       jp->coeffs = std::vector<double>(coeffs.data(), coeffs.data() + coeffs.rows() * coeffs.cols());
-    jp->targets =
-        std::vector<double>(joint_waypoint->joint_positions_.data(),
-                            joint_waypoint->joint_positions_.data() + joint_waypoint->joint_positions_.size());
+    jp->targets = std::vector<double>(joint_waypoint->getPositions().data(),
+                                      joint_waypoint->getPositions().data() + joint_waypoint->getPositions().size());
     jp->first_step = 0;
     jp->last_step = pci.basic_info.n_steps - 1;
     jp->name = "configuration_cost";
