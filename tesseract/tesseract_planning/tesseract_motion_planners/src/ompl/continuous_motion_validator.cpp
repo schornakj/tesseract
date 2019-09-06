@@ -37,7 +37,7 @@ namespace tesseract_motion_planners
 ContinuousMotionValidator::ContinuousMotionValidator(ompl::base::SpaceInformationPtr space_info,
                                                      tesseract_environment::Environment::ConstPtr env,
                                                      tesseract_kinematics::ForwardKinematics::ConstPtr kin)
-  : MotionValidator(space_info), env_(std::move(env)), kin_(std::move(kin))
+  : MotionValidator(space_info), env_(env), kin_(kin), discrete_validator_(space_info, env, kin)
 {
   joints_ = kin_->getJointNames();
 
@@ -55,7 +55,7 @@ ContinuousMotionValidator::ContinuousMotionValidator(ompl::base::SpaceInformatio
 bool ContinuousMotionValidator::checkMotion(const ompl::base::State* s1, const ompl::base::State* s2) const
 {
   std::pair<ompl::base::State*, double> dummy = { nullptr, 0.0 };
-  return checkMotion(s1, s2, dummy);
+  return checkMotion(s1, s2, dummy) && this->discrete_validator_.checkMotion(s1, s2, dummy);
 }
 
 bool ContinuousMotionValidator::checkMotion(const ompl::base::State* s1,

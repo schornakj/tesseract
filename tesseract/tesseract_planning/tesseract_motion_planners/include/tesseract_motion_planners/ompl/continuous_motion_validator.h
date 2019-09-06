@@ -34,6 +34,7 @@ TESSERACT_COMMON_IGNORE_WARNINGS_POP
 
 #include <tesseract_environment/core/environment.h>
 #include <tesseract_kinematics/core/forward_kinematics.h>
+#include <tesseract_motion_planners/ompl/discrete_motion_validator.h>
 
 namespace tesseract_motion_planners
 {
@@ -57,6 +58,7 @@ private:
   tesseract_environment::Environment::ConstPtr env_;
   tesseract_kinematics::ForwardKinematics::ConstPtr kin_;
   tesseract_collision::ContinuousContactManager::Ptr contact_manager_;
+  tesseract_motion_planners::DiscreteMotionValidator discrete_validator_;  // TODO: remove once the continuous checker is able to check self-collisions
   std::vector<std::string> links_;
   std::vector<std::string> joints_;
   mutable std::mutex mutex_;
