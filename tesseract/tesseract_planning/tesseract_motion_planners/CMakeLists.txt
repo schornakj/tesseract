@@ -44,6 +44,7 @@ target_include_directories(${PROJECT_NAME}_trajopt SYSTEM PUBLIC
 # OMPL Freespace Planning Interface
 add_library(${PROJECT_NAME}_ompl_freespace SHARED
   src/ompl/ompl_freespace_planner.cpp
+  src/ompl/clearance_objective.cpp
   src/ompl/conversions.cpp
   src/ompl/continuous_motion_validator.cpp
   src/ompl/discrete_motion_validator.cpp
