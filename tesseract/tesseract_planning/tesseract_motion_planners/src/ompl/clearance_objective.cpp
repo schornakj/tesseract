@@ -8,8 +8,8 @@ ompl::base::OptimizationObjectivePtr tesseract_motion_planners::getBalancedObjec
     ompl::base::OptimizationObjectivePtr lengthObj(new ompl::base::PathLengthOptimizationObjective(si));
     ompl::base::OptimizationObjectivePtr clearObj(new tesseract_motion_planners::ClearanceObjective(si, env, kin));
     ompl::base::MultiOptimizationObjective* opt = new ompl::base::MultiOptimizationObjective(si);
-    opt->addObjective(lengthObj, 10.0);
-    opt->addObjective(clearObj, 1.0);
+    opt->addObjective(lengthObj, 5.0);
+    opt->addObjective(clearObj, 5.0);
     return ompl::base::OptimizationObjectivePtr(opt);
 }
 
@@ -20,7 +20,6 @@ tesseract_motion_planners::ClearanceObjective::ClearanceObjective(const ompl::ba
   , env_(std::move(env))
   , kin_(std::move(kin))
 {
-//  joint_names_ = {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"};
   joint_names_ = kin_->getJointNames();
 
   // kinematics objects does not know of every link affected by its motion so must compute adjacency map
@@ -28,35 +27,63 @@ tesseract_motion_planners::ClearanceObjective::ClearanceObjective(const ompl::ba
   tesseract_environment::AdjacencyMap adj_map(env_->getSceneGraph(), kin_->getActiveLinkNames(), env_->getCurrentState()->transforms);
   links_ = adj_map.getActiveLinkNames();
 
-  dcm_ = env_->getDiscreteContactManager();
-//  dcm_->setContactDistanceThreshold(1.0);
+  state_solver_ = env_->getStateSolver();
+
+  ccm_ = env_->getContinuousContactManager();
+  ccm_->setContactDistanceThreshold(0.2);
+  ccm_->setActiveCollisionObjects(links_);
 }
 
-ompl::base::Cost tesseract_motion_planners::ClearanceObjective::stateCost(const ompl::base::State* s) const
+
+ompl::base::Cost tesseract_motion_planners::ClearanceObjective::motionCost(const ompl::base::State* s1, const ompl::base::State* s2) const
 {
-//    const ompl::base::StateSpace& state_space = *si_->getStateSpace();
+  const auto* start = s1->as<ompl::base::RealVectorStateSpace::StateType>();
+  const auto* finish = s2->as<ompl::base::RealVectorStateSpace::StateType>();
 
-    const auto* state = s->as<ompl::base::RealVectorStateSpace::StateType>();
+  // Get the contact manager and state solver for this thread.
+  unsigned long int hash = std::hash<std::thread::id>{}(std::this_thread::get_id());
+  tesseract_collision::ContinuousContactManager::Ptr cm;
+  tesseract_environment::StateSolver::Ptr ss;
+  mutex_.lock();
+  auto it = continuous_contact_managers_.find(hash);
+  if (it == continuous_contact_managers_.end())
+  {
+    cm = ccm_->clone();
+    continuous_contact_managers_[hash] = cm;
 
-    const auto dof = si_->getStateDimension();
-    Eigen::Map<Eigen::VectorXd> joint_angles(state->values, dof);
+    ss = state_solver_->clone();
+    state_solver_managers_[hash] = ss;
+  }
+  else
+  {
+    cm = it->second;
+    ss = state_solver_managers_[hash];
+  }
+  mutex_.unlock();
 
-    tesseract_environment::EnvState::Ptr env_state = env_->getStateSolver()->getState(joint_names_, joint_angles);
+  const auto dof = si_->getStateDimension();
+  Eigen::Map<Eigen::VectorXd> start_joints(start->values, dof);
+  Eigen::Map<Eigen::VectorXd> finish_joints(finish->values, dof);
 
-    std::vector<tesseract_collision::ContactResultMap> results;
-    bool in_contact = tesseract_environment::checkTrajectoryState(results, *dcm_, env_state, tesseract_collision::ContactTestType::ALL, false);
+  tesseract_environment::EnvState::Ptr state0 = ss->getState(joint_names_, start_joints);
+  tesseract_environment::EnvState::Ptr state1 = ss->getState(joint_names_, finish_joints);
 
-    if (results.size() == 0) return ompl::base::Cost(0.0);  // return zero cost if so far away from collision that zero contacts are reported
+  for (const auto& link_name : links_)
+    cm->setCollisionObjectsTransform(link_name, state0->transforms[link_name], state1->transforms[link_name]);
 
-    double clearance = static_cast<double>(results.begin()->begin()->second[0].distance);
+  tesseract_collision::ContactResultMap contact_map;
+  cm->contactTest(contact_map, tesseract_collision::ContactTestType::CLOSEST);
 
-    double clearance_clamped = std::max(clearance, std::numeric_limits<double>::min());  // enforce that collision clearance should be nonzero and positive to calculate a valid cost
+  std::pair<std::string, std::string> pair = std::make_pair("aircraft", "eoat_link");  // TODO: avoid hardcoding
 
-//    double cost = 1.0;
+  auto result_it = contact_map.find(pair);
 
-    double cost = 1 / clearance_clamped;
+  if (result_it == contact_map.end()) return ompl::base::Cost(0.0);  // return zero cost if so far away from collision that zero contacts are reported
 
-    std::cout << "Clearance: " << clearance << " Cost: " << cost << std::endl;
+  double clearance_clamped = std::max(static_cast<double>(result_it->second[0].distance), std::numeric_limits<double>::min());  // enforce that collision clearance should be nonzero and positive to calculate a valid cost
 
-    return ompl::base::Cost(cost);
+  double cost = 1 / clearance_clamped;
+
+  return ompl::base::Cost(cost);
 }
+
