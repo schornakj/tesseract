@@ -181,8 +181,6 @@ protected:
   /** @brief OMPL Parallel planner */
   std::shared_ptr<ompl::tools::ParallelPlan> parallel_plan_;
 
-//  std::shared_ptr<PlannerType> planner_;
-
   /** @brief The ompl planner motion validator */
   ompl::base::MotionValidatorPtr motion_validator_;
 

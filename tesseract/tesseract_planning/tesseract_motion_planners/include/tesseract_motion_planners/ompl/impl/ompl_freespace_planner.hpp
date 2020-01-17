@@ -42,8 +42,8 @@ TESSERACT_COMMON_IGNORE_WARNINGS_POP
 #include <tesseract_motion_planners/ompl/continuous_motion_validator.h>
 #include <tesseract_motion_planners/ompl/discrete_motion_validator.h>
 #include <tesseract_motion_planners/ompl/weighted_real_vector_state_sampler.h>
-
 #include <tesseract_motion_planners/ompl/clearance_objective.h>
+
 
 namespace tesseract_motion_planners
 {
@@ -80,8 +80,6 @@ tesseract_common::StatusCode OMPLFreespacePlanner<PlannerType>::solve(PlannerRes
 
   ompl::base::PlannerStatus status =
       parallel_plan_->solve(config_->planning_time, 1, static_cast<unsigned>(config_->max_solutions), false);
-
-//  ompl::base::PlannerStatus status = planner_->solve(ompl::base::timedPlannerTerminationCondition(config_->planning_time));
 
   if (status != ompl::base::PlannerStatus::EXACT_SOLUTION)
   {
@@ -144,12 +142,6 @@ tesseract_common::StatusCode OMPLFreespacePlanner<PlannerType>::solve(PlannerRes
     response.status = tesseract_common::StatusCode(OMPLFreespacePlannerStatusCategory::SolutionFound, status_category_);
     CONSOLE_BRIDGE_logInform("%s, final trajectory is collision free", name_.c_str());
   }
-
-  std::cout
-      << "Found a solution of length "
-      << simple_setup_->getProblemDefinition()->getSolutionPath()->length()
-      << " with an optimization objective value of "
-      << simple_setup_->getProblemDefinition()->getSolutionPath()->cost(simple_setup_->getProblemDefinition()->getOptimizationObjective()) << std::endl;
 
   return response.status;
 }
@@ -372,13 +364,8 @@ bool OMPLFreespacePlanner<PlannerType>::setConfiguration(const OMPLFreespacePlan
     }
   }
 
-  // make sure the planners run until the time limit, and get the best possible solution
-//  simple_setup_->setOptimizationObjective(std::make_shared<tesseract_motion_planners::ClearanceObjective>(simple_setup_->getSpaceInformation(), env, kin_));
-//  simple_setup_->setOptimizationObjective(std::make_shared<tesseract_motion_planners::ClearanceObjective>(simple_setup_->getSpaceInformation()));
-  ompl::base::OptimizationObjectivePtr objective;
-//  objective.reset(new tesseract_motion_planners::ClearanceObjective(simple_setup_->getSpaceInformation(), env, kin_));
-  objective.reset(new ompl::base::MaximizeMinClearanceObjective(simple_setup_->getSpaceInformation()));
-
+  // set an optimization function to drive solutions away from collision
+  ompl::base::OptimizationObjectivePtr objective = tesseract_motion_planners::getBalancedObjective(simple_setup_->getSpaceInformation(), env, kin_);
   simple_setup_->getProblemDefinition()->setOptimizationObjective(objective);
 
   continuous_contact_manager_ = env->getContinuousContactManager();
@@ -387,19 +374,11 @@ bool OMPLFreespacePlanner<PlannerType>::setConfiguration(const OMPLFreespacePlan
 
   std::cout << "JOE DEBUG: about to plan" << std::endl;
 
-
-//  planner_ = std::make_shared<PlannerType>(simple_setup_->getSpaceInformation());
-//  planner_->setProblemDefinition(simple_setup_->getProblemDefinition());
-//  config_->settings.apply(*planner_);
-//  planner_->setup();
-
   parallel_plan_ = std::make_shared<ompl::tools::ParallelPlan>(simple_setup_->getProblemDefinition());
   for (auto i = 0; i < config_->num_threads; ++i)
   {
     std::shared_ptr<PlannerType> planner = std::make_shared<PlannerType>(simple_setup_->getSpaceInformation());
-    planner->setProblemDefinition(simple_setup_->getProblemDefinition());
     config_->settings.apply(*planner);
-    planner->setup();
     parallel_plan_->addPlanner(planner);
   }
 
