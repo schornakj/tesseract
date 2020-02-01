@@ -34,25 +34,24 @@ TESSERACT_COMMON_IGNORE_WARNINGS_PUSH
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 TESSERACT_COMMON_IGNORE_WARNINGS_POP
 
-#include <tesseract_motion_planners/ompl/ompl_settings.h>
+#include <tesseract_motion_planners/ompl/ompl_planner_configurator.h>
 #include <tesseract/tesseract.h>
 
 namespace tesseract_motion_planners
 {
-/**
- * @brief The OMPLPlannerConfig struct
- */
-
-template <typename PlannerType>
+/** @brief The OMPLPlannerConfig struct */
 struct OMPLPlannerConfig
 {
-  using Ptr = std::shared_ptr<OMPLPlannerConfig<PlannerType>>;
-  using ConstPtr = std::shared_ptr<const OMPLPlannerConfig<PlannerType>>;
-
-  explicit OMPLPlannerConfig(tesseract::Tesseract::ConstPtr tesseract_, std::string manipulator_);
+  using Ptr = std::shared_ptr<OMPLPlannerConfig>;
+  using ConstPtr = std::shared_ptr<const OMPLPlannerConfig>;
 
   explicit OMPLPlannerConfig(tesseract::Tesseract::ConstPtr tesseract_,
                              std::string manipulator_,
+                             std::vector<OMPLPlannerConfigurator::ConstPtr> planners);
+
+  explicit OMPLPlannerConfig(tesseract::Tesseract::ConstPtr tesseract_,
+                             std::string manipulator_,
+                             std::vector<OMPLPlannerConfigurator::ConstPtr> planners,
                              ompl::geometric::SimpleSetupPtr simple_setup);
 
   virtual ~OMPLPlannerConfig() = default;
@@ -105,11 +104,11 @@ struct OMPLPlannerConfig
   /** @brief Tesseract object. ***REQUIRED*** */
   tesseract::Tesseract::ConstPtr tesseract;
 
-  /** @brief Manipulator used for pathplanning ***REQUIRED*** */
+  /** @brief Manipulator used for path planning ***REQUIRED*** */
   std::string manipulator;
 
-  /** @brief Planner settings */
-  OMPLSettings<PlannerType> settings;
+  /** @brief The planner configurators ***REQUIRED*** */
+  std::vector<OMPLPlannerConfigurator::ConstPtr> planners;
 
   /** @brief If true, collision checking will be enabled. Default: true*/
   bool collision_check = true;

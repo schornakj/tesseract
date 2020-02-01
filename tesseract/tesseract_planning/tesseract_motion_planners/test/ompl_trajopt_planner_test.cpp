@@ -55,6 +55,7 @@ TESSERACT_COMMON_IGNORE_WARNINGS_POP
 #include <tesseract_motion_planners/hybrid/ompl_trajopt_freespace_planner.h>
 #include <tesseract_motion_planners/trajopt/config/trajopt_planner_freespace_config.h>
 #include <tesseract_motion_planners/ompl/config/ompl_planner_freespace_config.h>
+#include <tesseract_motion_planners/ompl/ompl_planner_configurator.h>
 
 using namespace tesseract;
 using namespace tesseract_scene_graph;
@@ -119,32 +120,35 @@ static void addBox(tesseract_environment::Environment& env)
   env.addLink(link_1, joint_1);
 }
 
-template <typename PlannerType>
+template <typename Configurator>
 class OMPLTrajOptTestFixture : public ::testing::Test
 {
 public:
+  OMPLTrajOptTestFixture() { configurator = std::make_shared<Configurator>(); }
   using ::testing::Test::Test;
-  tesseract_motion_planners::OMPLTrajOptFreespacePlanner<PlannerType> planner;
+  std::shared_ptr<Configurator> configurator;
+  tesseract_motion_planners::OMPLTrajOptFreespacePlanner planner;
 };
 
-using Implementations = ::testing::Types<ompl::geometric::SBL,
-                                         ompl::geometric::PRM,
-                                         ompl::geometric::PRMstar,
-                                         ompl::geometric::LazyPRMstar,
-                                         ompl::geometric::EST,
-                                         ompl::geometric::LBKPIECE1,
-                                         ompl::geometric::BKPIECE1,
-                                         ompl::geometric::KPIECE1,
-                                         // ompl::geometric::RRT,
-                                         // ompl::geometric::RRTstar,
-                                         // ompl::geometric::SPARS,
-                                         // ompl::geometric::TRRT,
-                                         ompl::geometric::RRTConnect>;
+using Implementations = ::testing::Types<tesseract_motion_planners::SBLConfigurator,
+                                         tesseract_motion_planners::PRMConfigurator,
+                                         tesseract_motion_planners::PRMstarConfigurator,
+                                         tesseract_motion_planners::LazyPRMstarConfigurator,
+                                         tesseract_motion_planners::ESTConfigurator,
+                                         tesseract_motion_planners::LBKPIECE1Configurator,
+                                         tesseract_motion_planners::BKPIECE1Configurator,
+                                         tesseract_motion_planners::KPIECE1Configurator,
+                                         // tesseract_motion_planners::RRTConfigurator,
+                                         // tesseract_motion_planners::RRTstarConfigurator,
+                                         // tesseract_motion_planners::SPARSConfigurator,
+                                         // tesseract_motion_planners::TRRTConfigurator,
+                                         tesseract_motion_planners::RRTConnectConfigurator>;
 
 TYPED_TEST_CASE(OMPLTrajOptTestFixture, Implementations);
 
 TYPED_TEST(OMPLTrajOptTestFixture, OMPLTrajOptFreespacePlannerUnit)  // NOLINT
 {
+  using namespace tesseract_motion_planners;
   EXPECT_EQ(ompl::RNG::getSeed(), SEED) << "Randomization seed does not match expected: " << ompl::RNG::getSeed()
                                         << " vs. " << SEED;
   util::gLogLevel = util::LevelDebug;
@@ -165,12 +169,12 @@ TYPED_TEST(OMPLTrajOptTestFixture, OMPLTrajOptFreespacePlannerUnit)  // NOLINT
   std::vector<double> swp = start_state;
   std::vector<double> ewp = end_state;
 
-  auto start = std::make_shared<tesseract_motion_planners::JointWaypoint>(swp, kin->getJointNames());
-  auto end = std::make_shared<tesseract_motion_planners::JointWaypoint>(ewp, kin->getJointNames());
+  auto start = std::make_shared<JointWaypoint>(swp, kin->getJointNames());
+  auto end = std::make_shared<JointWaypoint>(ewp, kin->getJointNames());
 
   // Create the OMPL config
-  auto ompl_config =
-      std::make_shared<tesseract_motion_planners::OMPLPlannerFreespaceConfig<TypeParam>>(tesseract, "manipulator");
+  std::vector<OMPLPlannerConfigurator::ConstPtr> planners = { std::make_shared<SBLConfigurator>() };
+  auto ompl_config = std::make_shared<OMPLPlannerFreespaceConfig>(tesseract, "manipulator", planners);
   {
     ompl_config->start_waypoint = start;
     ompl_config->end_waypoint = end;
@@ -184,11 +188,13 @@ TYPED_TEST(OMPLTrajOptTestFixture, OMPLTrajOptFreespacePlannerUnit)  // NOLINT
     ompl_config->collision_check = true;
     ompl_config->simplify = false;
     ompl_config->n_output_states = 50;
+
+    ompl_config->planners.push_back(this->configurator);
   }
 
   // Create the TrajOpt config
-  auto trajopt_config = std::make_shared<tesseract_motion_planners::TrajOptPlannerFreespaceConfig>(
-      tesseract, "manipulator", "tool0", Eigen::Isometry3d::Identity());
+  auto trajopt_config =
+      std::make_shared<TrajOptPlannerFreespaceConfig>(tesseract, "manipulator", "tool0", Eigen::Isometry3d::Identity());
   {
     trajopt_config->target_waypoints.push_back(start);
     trajopt_config->target_waypoints.push_back(end);
