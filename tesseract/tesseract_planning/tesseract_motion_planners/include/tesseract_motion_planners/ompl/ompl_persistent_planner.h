@@ -39,6 +39,8 @@ TESSERACT_COMMON_IGNORE_WARNINGS_POP
 #include <tesseract_motion_planners/ompl/config/ompl_planner_config.h>
 #include <tesseract_motion_planners/ompl/ompl_motion_planner_status_category.h>
 
+#include <ompl/geometric/planners/prm/PRM.h>
+
 namespace tesseract_motion_planners
 {
 class OMPLPersistentPlanner : public MotionPlanner
@@ -56,6 +58,8 @@ public:
    * @return True if successful otherwise false
    */
   bool setConfiguration(OMPLPlannerConfig::Ptr config);
+
+  bool updateConfiguration(OMPLPlannerConfig::Ptr config);
 
   /**
    * @brief Sets up the OMPL problem then solves. It is intended to simplify setting up
@@ -94,7 +98,9 @@ protected:
   std::shared_ptr<const OMPLMotionPlannerStatusCategory> status_category_;
 
   /** @brief OMPL Parallel planner */
-  std::shared_ptr<ompl::tools::ParallelPlan> parallel_plan_;
+//  std::shared_ptr<ompl::tools::ParallelPlan> parallel_plan_;
+
+  std::shared_ptr<ompl::geometric::PRM> prm_planner_;
 
   /** @brief The tesseract kinematics object */
   tesseract_kinematics::ForwardKinematics::ConstPtr kin_;

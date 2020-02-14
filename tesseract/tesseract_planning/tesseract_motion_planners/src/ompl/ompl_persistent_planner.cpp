@@ -63,55 +63,9 @@ tesseract_common::StatusCode OMPLPersistentPlanner::solve(PlannerResponse& respo
     return config_status;
   }
 
-  ompl::base::PlannerStatus status;
-  if (!config_->optimize)
-  {
-    // Solve problem. Results are stored in the response
-    // Disabling hybridization because there is a bug which will return a trajectory that starts at the end state
-    // and finishes at the end state.
-    status = parallel_plan_->solve(config_->planning_time, 1, static_cast<unsigned>(config_->max_solutions), false);
-  }
-  else
-  {
-    ompl::time::point end = ompl::time::now() + ompl::time::seconds(config_->planning_time);
-    const ompl::base::ProblemDefinitionPtr& pdef = config_->simple_setup->getProblemDefinition();
-    while (ompl::time::now() < end)
-    {
-      // Solve problem. Results are stored in the response
-      // Disabling hybridization because there is a bug which will return a trajectory that starts at the end state
-      // and finishes at the end state.
-      ompl::base::PlannerStatus localResult =
-          parallel_plan_->solve(std::max(ompl::time::seconds(end - ompl::time::now()), 0.0),
-                                1,
-                                static_cast<unsigned>(config_->max_solutions),
-                                false);
-      if (localResult)
-      {
-        if (status != ompl::base::PlannerStatus::EXACT_SOLUTION)
-          status = localResult;
+  std::cout << "Graph contains " << prm_planner_->milestoneCount() << " milestones and " << prm_planner_->edgeCount() << " edges." << std::endl;
 
-        if (!pdef->hasOptimizationObjective())
-        {
-          CONSOLE_BRIDGE_logDebug("Terminating early since there is no optimization objective specified");
-          break;
-        }
-
-        ompl::base::Cost obj_cost = pdef->getSolutionPath()->cost(pdef->getOptimizationObjective());
-
-        if (pdef->getOptimizationObjective()->isSatisfied(obj_cost))
-        {
-          CONSOLE_BRIDGE_logDebug("Terminating early since solution path satisfies the optimization objective");
-          break;
-        }
-
-        if (pdef->getSolutionCount() >= static_cast<std::size_t>(config_->max_solutions))
-        {
-          CONSOLE_BRIDGE_logDebug("Terminating early since %u solutions were generated", config_->max_solutions);
-          break;
-        }
-      }
-    }
-  }
+  ompl::base::PlannerStatus status = prm_planner_->solve(ompl::base::IterationTerminationCondition(1000));
 
   if (status != ompl::base::PlannerStatus::EXACT_SOLUTION)
   {
@@ -184,15 +138,38 @@ void OMPLPersistentPlanner::clear()
   config_ = nullptr;
   kin_ = nullptr;
   continuous_contact_manager_ = nullptr;
-  parallel_plan_ = nullptr;
+  prm_planner_ = nullptr;
 }
 
 tesseract_common::StatusCode OMPLPersistentPlanner::isConfigured() const
 {
-  if (config_ == nullptr || kin_ == nullptr || continuous_contact_manager_ == nullptr || parallel_plan_ == nullptr)
+  if (config_ == nullptr || kin_ == nullptr || continuous_contact_manager_ == nullptr || prm_planner_ == nullptr)
     return tesseract_common::StatusCode(OMPLMotionPlannerStatusCategory::ErrorIsNotConfigured, status_category_);
 
   return tesseract_common::StatusCode(OMPLMotionPlannerStatusCategory::IsConfigured, status_category_);
+}
+
+bool OMPLPersistentPlanner::updateConfiguration(OMPLPlannerConfig::Ptr config)
+{
+  tesseract_common::StatusCode config_status = isConfigured();
+  if (!config_status)
+  {
+    CONSOLE_BRIDGE_logError("Planner %s is not configured", name_.c_str());
+    return false;
+  }
+
+  config_ = std::move(config);
+  if (!config_->generate())
+  {
+    config_ = nullptr;
+    return false;
+  }
+
+  prm_planner_->clearQuery();
+  prm_planner_->setProblemDefinition(config_->simple_setup->getProblemDefinition());
+  prm_planner_->setup();
+
+  return true;
 }
 
 bool OMPLPersistentPlanner::setConfiguration(OMPLPlannerConfig::Ptr config)
@@ -218,10 +195,9 @@ bool OMPLPersistentPlanner::setConfiguration(OMPLPlannerConfig::Ptr config)
   continuous_contact_manager_->setActiveCollisionObjects(adj_map->getActiveLinkNames());
   continuous_contact_manager_->setContactDistanceThreshold(config_->collision_safety_margin);
 
-  parallel_plan_ = std::make_shared<ompl::tools::ParallelPlan>(config_->simple_setup->getProblemDefinition());
-
-  for (const auto& planner : config_->planners)
-    parallel_plan_->addPlanner(planner->create(config_->simple_setup->getSpaceInformation()));
+  prm_planner_ = std::make_shared<ompl::geometric::PRM>(config_->simple_setup->getSpaceInformation());
+  prm_planner_->setProblemDefinition(config_->simple_setup->getProblemDefinition());
+  prm_planner_->setup();
 
   return true;
 }
