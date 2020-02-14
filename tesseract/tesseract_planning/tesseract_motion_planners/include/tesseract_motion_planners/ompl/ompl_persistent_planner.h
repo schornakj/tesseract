@@ -59,7 +59,7 @@ public:
    */
   bool setConfiguration(OMPLPlannerConfig::Ptr config);
 
-  bool updateConfiguration(OMPLPlannerConfig::Ptr config);
+  bool updateConfiguration(tesseract_motion_planners::Waypoint::Ptr start, tesseract_motion_planners::Waypoint::Ptr end);
 
   /**
    * @brief Sets up the OMPL problem then solves. It is intended to simplify setting up

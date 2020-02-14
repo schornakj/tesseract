@@ -52,4 +52,9 @@ bool OMPLPlannerConfig::generate()
   return ((simple_setup != nullptr) && (tesseract != nullptr) && (!manipulator.empty()) && (!planners.empty()));
 }
 
+bool OMPLPlannerConfig::updateGoalStates(tesseract_motion_planners::Waypoint::Ptr start, tesseract_motion_planners::Waypoint::Ptr end)
+{
+  return true;
+}
+
 }  // namespace tesseract_motion_planners

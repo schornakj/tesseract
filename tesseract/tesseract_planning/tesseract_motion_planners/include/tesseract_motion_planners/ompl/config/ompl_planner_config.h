@@ -36,6 +36,7 @@ TESSERACT_COMMON_IGNORE_WARNINGS_POP
 
 #include <tesseract_motion_planners/ompl/ompl_planner_configurator.h>
 #include <tesseract/tesseract.h>
+#include <tesseract_motion_planners/core/waypoint.h>
 
 namespace tesseract_motion_planners
 {
@@ -65,6 +66,8 @@ struct OMPLPlannerConfig
    * @return True on success, false on failure
    */
   virtual bool generate();
+
+  virtual bool updateGoalStates(tesseract_motion_planners::Waypoint::Ptr start, tesseract_motion_planners::Waypoint::Ptr end);
 
   /** @brief Max planning time allowed in seconds */
   double planning_time = 5.0;

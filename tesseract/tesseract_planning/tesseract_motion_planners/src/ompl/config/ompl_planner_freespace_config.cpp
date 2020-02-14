@@ -124,8 +124,16 @@ bool OMPLPlannerFreespaceConfig::generate()
 
   simple_setup = std::make_shared<ompl::geometric::SimpleSetup>(state_space_ptr);
 
+//  if(!updateGoalStates(this)) return false;
+  //
+
+  //
+
+  //
+
   JointWaypoint::Ptr start_position;
   JointWaypoint::Ptr end_position;
+
 
   // Get descrete contact manager for testing provided start and end position
   // This is required because collision checking happens in motion validators now
@@ -205,6 +213,10 @@ bool OMPLPlannerFreespaceConfig::generate()
 
   simple_setup->setStartAndGoalStates(start_state, goal_state);
 
+  //
+  //
+  //
+
   // Setup state checking functionality
   if (svc != nullptr)
     simple_setup->setStateValidityChecker(svc);
@@ -238,8 +250,133 @@ bool OMPLPlannerFreespaceConfig::generate()
   if (optimization_objective_allocator)
   {
     simple_setup->getProblemDefinition()->setOptimizationObjective(
-        optimization_objective_allocator(simple_setup->getSpaceInformation()));
+        optimization_objective_allocator(simple_setup->getSpaceInformation(), env, kin));
   }
+
+  return true;
+}
+
+bool OMPLPlannerFreespaceConfig::updateGoalStates(tesseract_motion_planners::Waypoint::Ptr start, tesseract_motion_planners::Waypoint::Ptr end)
+{
+
+  JointWaypoint::Ptr start_position;
+  JointWaypoint::Ptr end_position;
+
+  // Check that parameters are valid
+  if (tesseract == nullptr)
+  {
+    CONSOLE_BRIDGE_logError("In OMPLPlannerFreespaceConfig: tesseract is a required parameter and has not been set");
+    return false;
+  }
+
+  tesseract_kinematics::ForwardKinematics::Ptr kin =
+      tesseract->getFwdKinematicsManagerConst()->getFwdKinematicSolver(manipulator);
+  if (kin == nullptr)
+  {
+    CONSOLE_BRIDGE_logError("In OMPLPlannerFreespaceConfig: failed to get kinematics object for manipulator: %s.",
+                            manipulator.c_str());
+    return false;
+  }
+
+  if (weights.size() == 0)
+  {
+    weights = Eigen::VectorXd::Ones(kin->numJoints());
+  }
+  else if (weights.size() != kin->numJoints())
+  {
+    CONSOLE_BRIDGE_logError("In OMPLPlannerFreespaceConfig: The weights must be the same length as the number of "
+                            "joints or "
+                            "have a length of zero!");
+    return false;
+  }
+
+  const tesseract_environment::Environment::ConstPtr& env = tesseract->getEnvironmentConst();
+  // kinematics objects does not know of every link affected by its motion so must compute adjacency map
+  // to determine all active links.
+  auto adj_map = std::make_shared<tesseract_environment::AdjacencyMap>(
+      env->getSceneGraph(), kin->getActiveLinkNames(), env->getCurrentState()->transforms);
+
+//  const std::vector<std::string>& joint_names = kin->getJointNames();
+  const auto dof = kin->numJoints();
+//  const auto& limits = kin->getLimits();
+
+  // Get descrete contact manager for testing provided start and end position
+  // This is required because collision checking happens in motion validators now
+  // instead of the isValid function to avoid unnecessary collision checks.
+  tesseract_collision::DiscreteContactManager::Ptr cm = env->getDiscreteContactManager();
+  cm->setActiveCollisionObjects(adj_map->getActiveLinkNames());
+  cm->setContactDistanceThreshold(collision_safety_margin);
+
+  // Set initial point
+  auto start_type = start->getType();
+  switch (start_type)
+  {
+    case tesseract_motion_planners::WaypointType::JOINT_WAYPOINT:
+    {
+      start_position = std::static_pointer_cast<JointWaypoint>(start);
+      tesseract_environment::EnvState::Ptr s =
+          env->getState(start_position->getNames(), start_position->getPositions());
+
+      for (const auto& link_name : adj_map->getActiveLinkNames())
+        cm->setCollisionObjectsTransform(link_name, s->transforms[link_name]);
+
+      tesseract_collision::ContactResultMap contact_map;
+      cm->contactTest(contact_map, tesseract_collision::ContactTestType::FIRST);
+
+      if (!contact_map.empty())
+      {
+        CONSOLE_BRIDGE_logError("In OMPLPlannerFreespaceConfig: Start state is in collision");
+        return false;
+      }
+      break;
+    }
+    default:
+    {
+      CONSOLE_BRIDGE_logError("In OMPLPlannerFreespaceConfig: only support joint waypoints for start_waypoint");
+      return false;
+    }
+  };
+
+  // Set end point
+  auto end_type = end->getType();
+  switch (end_type)
+  {
+    case tesseract_motion_planners::WaypointType::JOINT_WAYPOINT:
+    {
+      end_position = std::static_pointer_cast<JointWaypoint>(end);
+      tesseract_environment::EnvState::Ptr s = env->getState(end_position->getNames(), end_position->getPositions());
+
+      for (const auto& link_name : adj_map->getActiveLinkNames())
+        cm->setCollisionObjectsTransform(link_name, s->transforms[link_name]);
+
+      tesseract_collision::ContactResultMap contact_map;
+      cm->contactTest(contact_map, tesseract_collision::ContactTestType::FIRST);
+
+      if (!contact_map.empty())
+      {
+        CONSOLE_BRIDGE_logError("In OMPLPlannerFreespaceConfig: End state is in collision");
+        return false;
+      }
+      break;
+    }
+    default:
+    {
+      CONSOLE_BRIDGE_logError("In OMPLPlannerFreespaceConfig: only support joint waypoints for end_waypoint");
+      return false;
+    }
+  };
+
+  ompl::base::ScopedState<> start_state(simple_setup->getStateSpace());
+  const Eigen::VectorXd sp = start_position->getPositions(kin->getJointNames());
+  for (unsigned i = 0; i < dof; ++i)
+    start_state[i] = sp[i];
+
+  ompl::base::ScopedState<> goal_state(simple_setup->getStateSpace());
+  const Eigen::VectorXd ep = end_position->getPositions(kin->getJointNames());
+  for (unsigned i = 0; i < dof; ++i)
+    goal_state[i] = ep[i];
+
+  simple_setup->setStartAndGoalStates(start_state, goal_state);
 
   return true;
 }

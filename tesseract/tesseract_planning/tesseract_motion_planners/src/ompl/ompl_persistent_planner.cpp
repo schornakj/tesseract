@@ -28,6 +28,7 @@
 TESSERACT_COMMON_IGNORE_WARNINGS_PUSH
 #include <console_bridge/console.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
+#include <ompl/base/PlannerTerminationCondition.h>
 TESSERACT_COMMON_IGNORE_WARNINGS_POP
 
 #include <tesseract_environment/core/utils.h>
@@ -65,7 +66,10 @@ tesseract_common::StatusCode OMPLPersistentPlanner::solve(PlannerResponse& respo
 
   std::cout << "Graph contains " << prm_planner_->milestoneCount() << " milestones and " << prm_planner_->edgeCount() << " edges." << std::endl;
 
-  ompl::base::PlannerStatus status = prm_planner_->solve(ompl::base::IterationTerminationCondition(1000));
+  auto term_cond = ompl::base::plannerOrTerminationCondition(ompl::base::timedPlannerTerminationCondition(config_->planning_time),
+                                                             ompl::base::exactSolnPlannerTerminationCondition(config_->simple_setup->getProblemDefinition()));
+
+  ompl::base::PlannerStatus status = prm_planner_->solve(term_cond);
 
   if (status != ompl::base::PlannerStatus::EXACT_SOLUTION)
   {
@@ -138,7 +142,7 @@ void OMPLPersistentPlanner::clear()
   config_ = nullptr;
   kin_ = nullptr;
   continuous_contact_manager_ = nullptr;
-  prm_planner_ = nullptr;
+//  prm_planner_ = nullptr;
 }
 
 tesseract_common::StatusCode OMPLPersistentPlanner::isConfigured() const
@@ -149,7 +153,7 @@ tesseract_common::StatusCode OMPLPersistentPlanner::isConfigured() const
   return tesseract_common::StatusCode(OMPLMotionPlannerStatusCategory::IsConfigured, status_category_);
 }
 
-bool OMPLPersistentPlanner::updateConfiguration(OMPLPlannerConfig::Ptr config)
+bool OMPLPersistentPlanner::updateConfiguration(tesseract_motion_planners::Waypoint::Ptr start, tesseract_motion_planners::Waypoint::Ptr end)
 {
   tesseract_common::StatusCode config_status = isConfigured();
   if (!config_status)
@@ -158,8 +162,9 @@ bool OMPLPersistentPlanner::updateConfiguration(OMPLPlannerConfig::Ptr config)
     return false;
   }
 
-  config_ = std::move(config);
-  if (!config_->generate())
+//  config_ = std::move(config);
+
+  if (!config_->updateGoalStates(start, end))
   {
     config_ = nullptr;
     return false;
@@ -167,7 +172,7 @@ bool OMPLPersistentPlanner::updateConfiguration(OMPLPlannerConfig::Ptr config)
 
   prm_planner_->clearQuery();
   prm_planner_->setProblemDefinition(config_->simple_setup->getProblemDefinition());
-  prm_planner_->setup();
+//  prm_planner_->setup();
 
   return true;
 }
@@ -197,6 +202,8 @@ bool OMPLPersistentPlanner::setConfiguration(OMPLPlannerConfig::Ptr config)
 
   prm_planner_ = std::make_shared<ompl::geometric::PRM>(config_->simple_setup->getSpaceInformation());
   prm_planner_->setProblemDefinition(config_->simple_setup->getProblemDefinition());
+
+//  config_->simple_setup->setPlanner(prm_planner_);
   prm_planner_->setup();
 
   return true;
