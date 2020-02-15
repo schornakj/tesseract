@@ -29,6 +29,7 @@ TESSERACT_COMMON_IGNORE_WARNINGS_PUSH
 #include <console_bridge/console.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/base/PlannerTerminationCondition.h>
+#include <ompl/base/terminationconditions/CostConvergenceTerminationCondition.h>
 TESSERACT_COMMON_IGNORE_WARNINGS_POP
 
 #include <tesseract_environment/core/utils.h>
@@ -64,10 +65,18 @@ tesseract_common::StatusCode OMPLPersistentPlanner::solve(PlannerResponse& respo
     return config_status;
   }
 
+  auto term_cond =
+      ompl::base::plannerOrTerminationCondition(
+        ompl::base::plannerAndTerminationCondition(ompl::base::timedPlannerTerminationCondition(10.0), ompl::base::exactSolnPlannerTerminationCondition(config_->simple_setup->getProblemDefinition())),
+        ompl::base::CostConvergenceTerminationCondition(config_->simple_setup->getProblemDefinition()));
+
+
   std::cout << "Graph contains " << prm_planner_->milestoneCount() << " milestones and " << prm_planner_->edgeCount() << " edges." << std::endl;
 
-  auto term_cond = ompl::base::plannerOrTerminationCondition(ompl::base::timedPlannerTerminationCondition(config_->planning_time),
-                                                             ompl::base::exactSolnPlannerTerminationCondition(config_->simple_setup->getProblemDefinition()));
+  std::cout << "Growing..." << std::endl;
+  prm_planner_->growRoadmap(10.0);
+
+  std::cout << "Solving..." << std::endl;
 
   ompl::base::PlannerStatus status = prm_planner_->solve(term_cond);
 
@@ -200,7 +209,7 @@ bool OMPLPersistentPlanner::setConfiguration(OMPLPlannerConfig::Ptr config)
   continuous_contact_manager_->setActiveCollisionObjects(adj_map->getActiveLinkNames());
   continuous_contact_manager_->setContactDistanceThreshold(config_->collision_safety_margin);
 
-  prm_planner_ = std::make_shared<ompl::geometric::PRM>(config_->simple_setup->getSpaceInformation());
+  prm_planner_ = std::make_shared<ompl::geometric::PRMstar>(config_->simple_setup->getSpaceInformation());
   prm_planner_->setProblemDefinition(config_->simple_setup->getProblemDefinition());
 
 //  config_->simple_setup->setPlanner(prm_planner_);

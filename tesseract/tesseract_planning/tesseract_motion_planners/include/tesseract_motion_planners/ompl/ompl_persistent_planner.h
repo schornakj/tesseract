@@ -40,6 +40,7 @@ TESSERACT_COMMON_IGNORE_WARNINGS_POP
 #include <tesseract_motion_planners/ompl/ompl_motion_planner_status_category.h>
 
 #include <ompl/geometric/planners/prm/PRM.h>
+#include <ompl/geometric/planners/prm/PRMstar.h>
 
 namespace tesseract_motion_planners
 {
@@ -100,7 +101,7 @@ protected:
   /** @brief OMPL Parallel planner */
 //  std::shared_ptr<ompl::tools::ParallelPlan> parallel_plan_;
 
-  std::shared_ptr<ompl::geometric::PRM> prm_planner_;
+  std::shared_ptr<ompl::geometric::PRMstar> prm_planner_;
 
   /** @brief The tesseract kinematics object */
   tesseract_kinematics::ForwardKinematics::ConstPtr kin_;
