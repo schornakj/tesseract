@@ -55,6 +55,8 @@ struct OMPLPlannerFreespaceConfig : public OMPLPlannerConfig
   /** @brief Generates the OMPL problem and saves the result internally */
   bool generate() override;
 
+  bool updateGoalStates(tesseract_motion_planners::Waypoint::Ptr start, tesseract_motion_planners::Waypoint::Ptr end) override;
+
   /**
    * @brief Determines the constraint placed at the start of the trajectory
    *
